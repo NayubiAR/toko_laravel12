@@ -8,6 +8,8 @@ use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Inventory\ProductController;
 use App\Http\Controllers\Inventory\CategoryController;
 use App\Http\Controllers\Purchasing\SupplierController;
+use App\Http\Controllers\Sales\PosController;
+use App\Http\Controllers\Sales\SaleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,16 +29,39 @@ Route::middleware('guest')->group(function () {
 */
 Route::middleware(['auth', \App\Http\Middleware\EnsureActiveUser::class])->group(function () {
 
-    // ── Logout ──
     Route::post('/logout', LogoutController::class)->name('logout');
-
-    // ── Dashboard ──
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // ── Profile ──
     Route::get('/profile',            [ProfileController::class, 'show'])->name('profile');
     Route::put('/profile',            [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password',   [ProfileController::class, 'updatePassword'])->name('profile.password');
+
+    /*
+    |----------------------------------------------------------------------
+    | POS ROUTES (Fase 3)
+    |----------------------------------------------------------------------
+    */
+    Route::middleware('permission:create-sale')
+        ->prefix('pos')
+        ->name('pos.')
+        ->group(function () {
+        Route::get('/',           [PosController::class, 'index'])->name('index');
+        Route::post('/checkout',  [PosController::class, 'checkout'])->name('checkout');
+        Route::get('/products',   [PosController::class, 'searchProducts'])->name('products.search');
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | SALES HISTORY ROUTES (Fase 3)
+    |----------------------------------------------------------------------
+    */
+    Route::middleware('permission:view-sales|create-sale')
+        ->prefix('sales')
+        ->name('sales.')
+        ->group(function () {
+        Route::get('/',        [SaleController::class, 'index'])->name('index');
+        Route::get('/{sale}',  [SaleController::class, 'show'])->name('show');
+    });
 
     /*
     |----------------------------------------------------------------------
@@ -47,59 +72,19 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureActiveUser::class])->group
         ->prefix('inventory')
         ->name('inventory.')
         ->group(function () {
-
-        // Produk
         Route::resource('products', ProductController::class);
-
-        // Kategori (tanpa show & edit, pakai modal)
         Route::resource('categories', CategoryController::class)->except(['show', 'edit', 'create']);
     });
 
     /*
     |----------------------------------------------------------------------
-    | PURCHASING ROUTES (Fase 2 - Supplier)
+    | PURCHASING ROUTES (Fase 2)
     |----------------------------------------------------------------------
     */
     Route::middleware('permission:manage-suppliers')
         ->prefix('purchasing')
         ->name('purchasing.')
         ->group(function () {
-
         Route::resource('suppliers', SupplierController::class);
     });
-
-    /*
-    |----------------------------------------------------------------------
-    | POS ROUTES (Fase 3 - akan diisi nanti)
-    |----------------------------------------------------------------------
-    */
-    // Route::prefix('pos')->name('pos.')->group(function () { ... });
-
-    /*
-    |----------------------------------------------------------------------
-    | SALES ROUTES (Fase 4 - akan diisi nanti)
-    |----------------------------------------------------------------------
-    */
-    // Route::prefix('sales')->name('sales.')->group(function () { ... });
-
-    /*
-    |----------------------------------------------------------------------
-    | FINANCE ROUTES (Fase 5 - akan diisi nanti)
-    |----------------------------------------------------------------------
-    */
-    // Route::prefix('finance')->name('finance.')->group(function () { ... });
-
-    /*
-    |----------------------------------------------------------------------
-    | CUSTOMER ROUTES (Fase 7 - akan diisi nanti)
-    |----------------------------------------------------------------------
-    */
-    // Route::prefix('customers')->name('customers.')->group(function () { ... });
-
-    /*
-    |----------------------------------------------------------------------
-    | SETTINGS ROUTES (Admin & Owner only)
-    |----------------------------------------------------------------------
-    */
-    // Route::middleware('role:admin|owner')->prefix('settings')->name('settings.')->group(function () { ... });
 });

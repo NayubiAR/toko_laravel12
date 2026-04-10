@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\PaymentMethod;
-use App\Enums\PaymentStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -18,9 +17,10 @@ class Payment extends Model
     protected $casts = [
         'amount'      => 'decimal:2',
         'method'      => PaymentMethod::class,
-        'status'      => PaymentStatus::class,
         'paid_at'     => 'datetime',
         'verified_at' => 'datetime',
+        // status NOT cast to enum — tabel payments pakai 'success/pending/failed/refunded'
+        // yang berbeda dari PaymentStatus enum ('paid/pending/partial/failed/refunded')
     ];
 
     // ── Relationships ──
@@ -33,5 +33,29 @@ class Payment extends Model
     public function verifier(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    // ── Accessors ──
+
+    public function getStatusLabelAttribute(): string
+    {
+        return match($this->status) {
+            'success'  => 'Berhasil',
+            'pending'  => 'Menunggu',
+            'failed'   => 'Gagal',
+            'refunded' => 'Refund',
+            default    => $this->status,
+        };
+    }
+
+    public function getStatusColorAttribute(): string
+    {
+        return match($this->status) {
+            'success'  => 'emerald',
+            'pending'  => 'amber',
+            'failed'   => 'red',
+            'refunded' => 'gray',
+            default    => 'slate',
+        };
     }
 }
