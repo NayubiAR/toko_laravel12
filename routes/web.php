@@ -10,6 +10,7 @@ use App\Http\Controllers\Inventory\CategoryController;
 use App\Http\Controllers\Purchasing\SupplierController;
 use App\Http\Controllers\Sales\PosController;
 use App\Http\Controllers\Sales\SaleController;
+use App\Http\Controllers\Sales\ReceiptController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,7 +39,7 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureActiveUser::class])->group
 
     /*
     |----------------------------------------------------------------------
-    | POS ROUTES (Fase 3)
+    | POS ROUTES
     |----------------------------------------------------------------------
     */
     Route::middleware('permission:create-sale')
@@ -52,20 +53,23 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureActiveUser::class])->group
 
     /*
     |----------------------------------------------------------------------
-    | SALES HISTORY ROUTES (Fase 3)
+    | SALES & RECEIPT ROUTES (Fase 3 + 4)
     |----------------------------------------------------------------------
     */
     Route::middleware('permission:view-sales|create-sale')
         ->prefix('sales')
         ->name('sales.')
         ->group(function () {
-        Route::get('/',        [SaleController::class, 'index'])->name('index');
-        Route::get('/{sale}',  [SaleController::class, 'show'])->name('show');
+        Route::get('/',                    [SaleController::class, 'index'])->name('index');
+        Route::get('/{sale}',              [SaleController::class, 'show'])->name('show');
+        Route::get('/{sale}/receipt',      [ReceiptController::class, 'thermal'])->name('receipt.thermal');
+        Route::get('/{sale}/invoice',      [ReceiptController::class, 'a4'])->name('receipt.a4');
+        Route::get('/{sale}/download/{format?}', [ReceiptController::class, 'download'])->name('receipt.download');
     });
 
     /*
     |----------------------------------------------------------------------
-    | INVENTORY ROUTES (Fase 2)
+    | INVENTORY ROUTES
     |----------------------------------------------------------------------
     */
     Route::middleware('permission:manage-products|view-products')
@@ -78,7 +82,7 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureActiveUser::class])->group
 
     /*
     |----------------------------------------------------------------------
-    | PURCHASING ROUTES (Fase 2)
+    | PURCHASING ROUTES
     |----------------------------------------------------------------------
     */
     Route::middleware('permission:manage-suppliers')
