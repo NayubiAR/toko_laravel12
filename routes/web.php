@@ -14,6 +14,8 @@ use App\Http\Controllers\Sales\SaleController;
 use App\Http\Controllers\Sales\ReceiptController;
 use App\Http\Controllers\Finance\CashFlowController;
 use App\Http\Controllers\Finance\ReportController;
+use App\Http\Controllers\Customer\CustomerController;
+use App\Http\Controllers\Customer\LoyaltyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -101,22 +103,40 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureActiveUser::class])->group
 
     /*
     |----------------------------------------------------------------------
-    | FINANCE ROUTES (Fase 5)
+    | FINANCE ROUTES
     |----------------------------------------------------------------------
     */
     Route::middleware('permission:view-reports|view-cash-flow|view-profit-loss')
         ->prefix('finance')
         ->name('finance.')
         ->group(function () {
-
-        // Arus Kas
         Route::get('/cash-flow',          [CashFlowController::class, 'index'])->name('cash-flow.index');
         Route::get('/cash-flow/create',   [CashFlowController::class, 'create'])->name('cash-flow.create');
         Route::post('/cash-flow',         [CashFlowController::class, 'store'])->name('cash-flow.store');
         Route::delete('/cash-flow/{cashFlow}', [CashFlowController::class, 'destroy'])->name('cash-flow.destroy');
 
-        // Laporan
         Route::get('/reports/sales',       [ReportController::class, 'sales'])->name('reports.sales');
         Route::get('/reports/profit-loss', [ReportController::class, 'profitLoss'])->name('reports.profit-loss');
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | CUSTOMER & LOYALTY ROUTES (Fase 7)
+    |----------------------------------------------------------------------
+    */
+    Route::middleware('permission:manage-customers|view-customers')
+        ->prefix('customers')
+        ->name('customers.')
+        ->group(function () {
+        Route::get('/',              [CustomerController::class, 'index'])->name('index');
+        Route::get('/create',        [CustomerController::class, 'create'])->name('create');
+        Route::post('/',             [CustomerController::class, 'store'])->name('store');
+        Route::get('/{customer}',    [CustomerController::class, 'show'])->name('show');
+        Route::get('/{customer}/edit', [CustomerController::class, 'edit'])->name('edit');
+        Route::put('/{customer}',    [CustomerController::class, 'update'])->name('update');
+        Route::delete('/{customer}', [CustomerController::class, 'destroy'])->name('destroy');
+
+        // Loyalty - adjust poin
+        Route::post('/{customer}/adjust-points', [LoyaltyController::class, 'adjustPoints'])->name('adjust-points');
     });
 });
