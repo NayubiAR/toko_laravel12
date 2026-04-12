@@ -7,10 +7,13 @@ use App\Http\Controllers\Auth\ProfileController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Inventory\ProductController;
 use App\Http\Controllers\Inventory\CategoryController;
+use App\Http\Controllers\Inventory\StockMovementController;
 use App\Http\Controllers\Purchasing\SupplierController;
 use App\Http\Controllers\Sales\PosController;
 use App\Http\Controllers\Sales\SaleController;
 use App\Http\Controllers\Sales\ReceiptController;
+use App\Http\Controllers\Finance\CashFlowController;
+use App\Http\Controllers\Finance\ReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,7 +56,7 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureActiveUser::class])->group
 
     /*
     |----------------------------------------------------------------------
-    | SALES & RECEIPT ROUTES (Fase 3 + 4)
+    | SALES & RECEIPT ROUTES
     |----------------------------------------------------------------------
     */
     Route::middleware('permission:view-sales|create-sale')
@@ -78,6 +81,10 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureActiveUser::class])->group
         ->group(function () {
         Route::resource('products', ProductController::class);
         Route::resource('categories', CategoryController::class)->except(['show', 'edit', 'create']);
+
+        Route::get('/stock-movements',         [StockMovementController::class, 'index'])->name('stock-movements.index');
+        Route::get('/stock-movements/create',  [StockMovementController::class, 'create'])->name('stock-movements.create');
+        Route::post('/stock-movements',        [StockMovementController::class, 'store'])->name('stock-movements.store');
     });
 
     /*
@@ -90,5 +97,26 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureActiveUser::class])->group
         ->name('purchasing.')
         ->group(function () {
         Route::resource('suppliers', SupplierController::class);
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | FINANCE ROUTES (Fase 5)
+    |----------------------------------------------------------------------
+    */
+    Route::middleware('permission:view-reports|view-cash-flow|view-profit-loss')
+        ->prefix('finance')
+        ->name('finance.')
+        ->group(function () {
+
+        // Arus Kas
+        Route::get('/cash-flow',          [CashFlowController::class, 'index'])->name('cash-flow.index');
+        Route::get('/cash-flow/create',   [CashFlowController::class, 'create'])->name('cash-flow.create');
+        Route::post('/cash-flow',         [CashFlowController::class, 'store'])->name('cash-flow.store');
+        Route::delete('/cash-flow/{cashFlow}', [CashFlowController::class, 'destroy'])->name('cash-flow.destroy');
+
+        // Laporan
+        Route::get('/reports/sales',       [ReportController::class, 'sales'])->name('reports.sales');
+        Route::get('/reports/profit-loss', [ReportController::class, 'profitLoss'])->name('reports.profit-loss');
     });
 });
