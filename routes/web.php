@@ -16,6 +16,9 @@ use App\Http\Controllers\Finance\CashFlowController;
 use App\Http\Controllers\Finance\ReportController;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Customer\LoyaltyController;
+use App\Http\Controllers\Settings\SettingController;
+use App\Http\Controllers\Settings\UserController;
+use App\Http\Controllers\Settings\ActivityLogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -44,13 +47,11 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureActiveUser::class])->group
 
     /*
     |----------------------------------------------------------------------
-    | POS ROUTES
+    | POS
     |----------------------------------------------------------------------
     */
     Route::middleware('permission:create-sale')
-        ->prefix('pos')
-        ->name('pos.')
-        ->group(function () {
+        ->prefix('pos')->name('pos.')->group(function () {
         Route::get('/',           [PosController::class, 'index'])->name('index');
         Route::post('/checkout',  [PosController::class, 'checkout'])->name('checkout');
         Route::get('/products',   [PosController::class, 'searchProducts'])->name('products.search');
@@ -58,32 +59,27 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureActiveUser::class])->group
 
     /*
     |----------------------------------------------------------------------
-    | SALES & RECEIPT ROUTES
+    | SALES & RECEIPTS
     |----------------------------------------------------------------------
     */
     Route::middleware('permission:view-sales|create-sale')
-        ->prefix('sales')
-        ->name('sales.')
-        ->group(function () {
-        Route::get('/',                    [SaleController::class, 'index'])->name('index');
-        Route::get('/{sale}',              [SaleController::class, 'show'])->name('show');
-        Route::get('/{sale}/receipt',      [ReceiptController::class, 'thermal'])->name('receipt.thermal');
-        Route::get('/{sale}/invoice',      [ReceiptController::class, 'a4'])->name('receipt.a4');
+        ->prefix('sales')->name('sales.')->group(function () {
+        Route::get('/',                          [SaleController::class, 'index'])->name('index');
+        Route::get('/{sale}',                    [SaleController::class, 'show'])->name('show');
+        Route::get('/{sale}/receipt',            [ReceiptController::class, 'thermal'])->name('receipt.thermal');
+        Route::get('/{sale}/invoice',            [ReceiptController::class, 'a4'])->name('receipt.a4');
         Route::get('/{sale}/download/{format?}', [ReceiptController::class, 'download'])->name('receipt.download');
     });
 
     /*
     |----------------------------------------------------------------------
-    | INVENTORY ROUTES
+    | INVENTORY
     |----------------------------------------------------------------------
     */
     Route::middleware('permission:manage-products|view-products')
-        ->prefix('inventory')
-        ->name('inventory.')
-        ->group(function () {
+        ->prefix('inventory')->name('inventory.')->group(function () {
         Route::resource('products', ProductController::class);
         Route::resource('categories', CategoryController::class)->except(['show', 'edit', 'create']);
-
         Route::get('/stock-movements',         [StockMovementController::class, 'index'])->name('stock-movements.index');
         Route::get('/stock-movements/create',  [StockMovementController::class, 'create'])->name('stock-movements.create');
         Route::post('/stock-movements',        [StockMovementController::class, 'store'])->name('stock-movements.store');
@@ -91,43 +87,36 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureActiveUser::class])->group
 
     /*
     |----------------------------------------------------------------------
-    | PURCHASING ROUTES
+    | PURCHASING
     |----------------------------------------------------------------------
     */
     Route::middleware('permission:manage-suppliers')
-        ->prefix('purchasing')
-        ->name('purchasing.')
-        ->group(function () {
+        ->prefix('purchasing')->name('purchasing.')->group(function () {
         Route::resource('suppliers', SupplierController::class);
     });
 
     /*
     |----------------------------------------------------------------------
-    | FINANCE ROUTES
+    | FINANCE
     |----------------------------------------------------------------------
     */
     Route::middleware('permission:view-reports|view-cash-flow|view-profit-loss')
-        ->prefix('finance')
-        ->name('finance.')
-        ->group(function () {
-        Route::get('/cash-flow',          [CashFlowController::class, 'index'])->name('cash-flow.index');
-        Route::get('/cash-flow/create',   [CashFlowController::class, 'create'])->name('cash-flow.create');
-        Route::post('/cash-flow',         [CashFlowController::class, 'store'])->name('cash-flow.store');
-        Route::delete('/cash-flow/{cashFlow}', [CashFlowController::class, 'destroy'])->name('cash-flow.destroy');
-
-        Route::get('/reports/sales',       [ReportController::class, 'sales'])->name('reports.sales');
-        Route::get('/reports/profit-loss', [ReportController::class, 'profitLoss'])->name('reports.profit-loss');
+        ->prefix('finance')->name('finance.')->group(function () {
+        Route::get('/cash-flow',              [CashFlowController::class, 'index'])->name('cash-flow.index');
+        Route::get('/cash-flow/create',       [CashFlowController::class, 'create'])->name('cash-flow.create');
+        Route::post('/cash-flow',             [CashFlowController::class, 'store'])->name('cash-flow.store');
+        Route::delete('/cash-flow/{cashFlow}',[CashFlowController::class, 'destroy'])->name('cash-flow.destroy');
+        Route::get('/reports/sales',          [ReportController::class, 'sales'])->name('reports.sales');
+        Route::get('/reports/profit-loss',    [ReportController::class, 'profitLoss'])->name('reports.profit-loss');
     });
 
     /*
     |----------------------------------------------------------------------
-    | CUSTOMER & LOYALTY ROUTES (Fase 7)
+    | CUSTOMERS & LOYALTY
     |----------------------------------------------------------------------
     */
     Route::middleware('permission:manage-customers|view-customers')
-        ->prefix('customers')
-        ->name('customers.')
-        ->group(function () {
+        ->prefix('customers')->name('customers.')->group(function () {
         Route::get('/',              [CustomerController::class, 'index'])->name('index');
         Route::get('/create',        [CustomerController::class, 'create'])->name('create');
         Route::post('/',             [CustomerController::class, 'store'])->name('store');
@@ -135,8 +124,25 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureActiveUser::class])->group
         Route::get('/{customer}/edit', [CustomerController::class, 'edit'])->name('edit');
         Route::put('/{customer}',    [CustomerController::class, 'update'])->name('update');
         Route::delete('/{customer}', [CustomerController::class, 'destroy'])->name('destroy');
-
-        // Loyalty - adjust poin
         Route::post('/{customer}/adjust-points', [LoyaltyController::class, 'adjustPoints'])->name('adjust-points');
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | SETTINGS (Owner & Admin only)
+    |----------------------------------------------------------------------
+    */
+    Route::middleware('role:owner|admin')
+        ->prefix('settings')->name('settings.')->group(function () {
+
+        // Pengaturan Toko
+        Route::get('/',    [SettingController::class, 'index'])->name('index');
+        Route::put('/',    [SettingController::class, 'update'])->name('update');
+
+        // Kelola User
+        Route::resource('users', UserController::class);
+
+        // Audit Trail
+        Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log');
     });
 });
