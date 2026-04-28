@@ -17,19 +17,24 @@ class PosController extends Controller
         private CheckoutService $checkoutService
     ) {}
 
-    /**
-     * Halaman POS utama.
-     */
     public function index(Request $request)
     {
-        $categories = Category::active()->orderBy('name')->get();
-        $customers = Customer::active()->orderBy('name')->get();
+        // Hanya ambil kolom yang diperlukan (kurangi memory)
+        $categories = Category::active()
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $customers = Customer::active()
+            ->orderBy('name')
+            ->get(['id', 'code', 'name', 'tier']);
+
         $taxRate = (float) Setting::get('tax_rate', 11);
 
-        // Load produk (filter by search & kategori)
+        // Load produk - select kolom minimal saja
         $products = Product::active()
             ->where('stock', '>', 0)
-            ->with('category')
+            ->select(['id', 'sku', 'name', 'sell_price', 'stock', 'unit', 'category_id', 'image'])
+            ->with('category:id,name')
             ->when($request->search, function ($q, $s) {
                 $q->search($s);
             })
@@ -39,7 +44,7 @@ class PosController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Map untuk JSON di frontend (hindari arrow function di Blade)
+        // Map untuk JSON di frontend
         $productsJson = $products->map(function ($p) {
             return [
                 'id'          => $p->id,
@@ -57,9 +62,6 @@ class PosController extends Controller
         return view('pos.index', compact('products', 'productsJson', 'categories', 'customers', 'taxRate'));
     }
 
-    /**
-     * Proses checkout.
-     */
     public function checkout(Request $request)
     {
         $request->validate([
@@ -110,31 +112,24 @@ class PosController extends Controller
             ], 422);
 
         } catch (\Exception $e) {
-            \Log::error('Checkout Error: ' . $e->getMessage(), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-            ]);
+            \Log::error('Checkout Error: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
                 'message' => 'Terjadi kesalahan saat memproses transaksi.',
-                'error'   => $e->getMessage(),
-                'file'    => $e->getFile() . ':' . $e->getLine(),
+                'error'   => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
     }
 
-    /**
-     * API: Search produk untuk POS.
-     */
     public function searchProducts(Request $request)
     {
         $products = Product::active()
             ->where('stock', '>', 0)
+            ->select(['id', 'sku', 'name', 'sell_price', 'stock', 'unit', 'category_id', 'image'])
             ->when($request->q, fn($q, $s) => $q->search($s))
             ->when($request->category, fn($q, $c) => $q->where('category_id', $c))
-            ->with('category')
+            ->with('category:id,name')
             ->orderBy('name')
             ->limit(50)
             ->get()
